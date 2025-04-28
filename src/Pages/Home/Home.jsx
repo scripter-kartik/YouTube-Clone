@@ -15,7 +15,7 @@ const Home = ({ sidebar }) => {
         setCategory={setCategory}
       />
       <div className={`container ${sidebar ? "" : "large-container"}`}>
-        <Feed category={category}/>
+        <Feed category={category} />
       </div>
     </>
   );

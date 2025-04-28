@@ -21,7 +21,9 @@ const Navbar = ({ setSidebar }) => {
           src={menu_icon}
           alt="Menu"
         />
-        <Link to='/'><img className="logo" src={logo} alt="Logo" /></Link>
+        <Link to="/">
+          <img className="logo" src={logo} alt="Logo" />
+        </Link>
       </div>
 
       <div className="nav-middle flex-div">

@@ -1,54 +1,86 @@
 import React, { useEffect, useState } from "react";
 import "./PlayVideo.css";
-import video1 from "../../assets/video.mp4";
 import like from "../../assets/like.png";
 import dislike from "../../assets/dislike.png";
 import share from "../../assets/share.png";
 import save from "../../assets/save.png";
-import jack from "../../assets/jack.png";
-import user_profile from "../../assets/user_profile.jpg";
 import { API_KEY, value_converter } from "../../data";
 import moment from "moment";
+import { useParams } from "react-router-dom";
 
-const PlayVideo = ({ videoId }) => {
+const PlayVideo = () => {
+  const { videoId } = useParams();
   const [apiData, setApiData] = useState(null);
   const [channelData, setChannelData] = useState(null);
   const [commentData, setCommentData] = useState([]);
 
   const fetchVideoData = async () => {
-    // Fetching Videos Data
-    const videoDetails_url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${API_KEY} `;
-    await fetch(videoDetails_url)
-      .then((res) => res.json())
-      .then((data) => setApiData(data.items[0]));
+    try {
+      const videoDetails_url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${API_KEY}`;
+      const res = await fetch(videoDetails_url);
+      if (!res.ok) {
+        throw new Error("Failed to fetch video data");
+      }
+      const data = await res.json();
+      setApiData(data.items[0]);
+    } catch (error) {
+      console.error("Error fetching video data:", error);
+    }
   };
 
   const fetchOtherData = async () => {
-    // fetching Channel Data
-    const channelData_url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${apiData.snippet.channelId}&key=${API_KEY}`;
-    await fetch(channelData_url)
-      .then((res) => res.json())
-      .then((data) => setChannelData(data.items[0]));
+    try {
+      // Fetching Channel Data
+      const channelData_url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${apiData.snippet.channelId}&key=${API_KEY}`;
+      const resChannel = await fetch(channelData_url);
+      if (!resChannel.ok) {
+        throw new Error("Failed to fetch channel data");
+      }
+      const dataChannel = await resChannel.json();
+      setChannelData(dataChannel.items[0]);
 
-    // fetching Comment Data
-    const comment_url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=50&videoId=${videoId}&key=${API_KEY}`;
+      // Fetching Comment Data with Pagination
+      let commentList = [];
+      let nextPageToken = "";
+      const fetchComments = async (pageToken = "") => {
+        const comment_url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=50&videoId=${videoId}&pageToken=${pageToken}&key=${API_KEY}`;
+        const resComment = await fetch(comment_url);
+        if (!resComment.ok) {
+          throw new Error("Failed to fetch comment data");
+        }
+        const dataComment = await resComment.json();
+        commentList = [...commentList, ...dataComment.items];
+        if (dataComment.nextPageToken) {
+          fetchComments(dataComment.nextPageToken); // Recursive call to fetch next page
+        } else {
+          setCommentData(commentList); // Once all comments are fetched, set the state
+        }
+      };
 
-    await fetch(comment_url)
-      .then((res) => res.json())
-      .then((data) => setCommentData(data.items));
+      fetchComments(); // Start fetching comments
+    } catch (error) {
+      console.error("Error fetching other data:", error);
+    }
   };
 
   useEffect(() => {
-    fetchVideoData();
+    const fetchData = async () => {
+      await fetchVideoData();
+    };
+    fetchData();
   }, [videoId]);
 
   useEffect(() => {
-    fetchOtherData();
+    if (apiData) {
+      const fetchData = async () => {
+        await fetchOtherData();
+      };
+      fetchData();
+    }
   }, [apiData]);
 
   return (
     <div className="play-video">
-      {/* <video src={video1} controls autoPlay muted></video> */}
       <iframe
         src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
         frameborder="0"
@@ -121,12 +153,20 @@ const PlayVideo = ({ videoId }) => {
               <div>
                 <h3>
                   {item.snippet.topLevelComment.snippet.authorDisplayName}{" "}
-                  <span>1 day ago</span>
+                  <span>
+                    {moment(
+                      item.snippet.topLevelComment.snippet.publishedAt
+                    ).fromNow()}
+                  </span>
                 </h3>
                 <p>{item.snippet.topLevelComment.snippet.textDisplay}</p>
                 <div className="comment-action">
                   <img src={like} alt="" />
-                  <span>{value_converter(item.snippet.topLevelComment.snippet.likeCount)}</span>
+                  <span>
+                    {value_converter(
+                      item.snippet.topLevelComment.snippet.likeCount
+                    )}
+                  </span>
                   <img src={dislike} alt="" />
                 </div>
               </div>
