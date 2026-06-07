@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import "./Feed.css";
 import { Link } from "react-router-dom";
 import { API_KEY, value_converter } from "../../data";
@@ -7,18 +7,18 @@ import moment from "moment";
 const Feed = ({ category }) => {
   const [data, setData] = useState([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const videoList_url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=US&maxResults=50&videoCategoryId=${category}&key=${API_KEY}`;
     await fetch(videoList_url)
       .then((response) => response.json())
       .then((data) => {
-        setData(data.items);
+        setData(data.items || []);
       });
-  };
+  }, [category]);
 
   useEffect(() => {
     fetchData();
-  }, [category]);
+  }, [fetchData]);
 
   return (
     <div className="feed">

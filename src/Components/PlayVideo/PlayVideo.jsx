@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import "./PlayVideo.css";
 import like from "../../assets/like.png";
 import dislike from "../../assets/dislike.png";
@@ -14,7 +14,7 @@ const PlayVideo = () => {
   const [channelData, setChannelData] = useState(null);
   const [commentData, setCommentData] = useState([]);
 
-  const fetchVideoData = async () => {
+  const fetchVideoData = useCallback(async () => {
     try {
       const videoDetails_url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${API_KEY}`;
       const res = await fetch(videoDetails_url);
@@ -26,9 +26,13 @@ const PlayVideo = () => {
     } catch (error) {
       console.error("Error fetching video data:", error);
     }
-  };
+  }, [videoId]);
 
-  const fetchOtherData = async () => {
+  const fetchOtherData = useCallback(async () => {
+    if (!apiData) {
+      return;
+    }
+
     try {
       // Fetching Channel Data
       const channelData_url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${apiData.snippet.channelId}&key=${API_KEY}`;
@@ -41,7 +45,6 @@ const PlayVideo = () => {
 
       // Fetching Comment Data with Pagination
       let commentList = [];
-      let nextPageToken = "";
       const fetchComments = async (pageToken = "") => {
         const comment_url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=50&videoId=${videoId}&pageToken=${pageToken}&key=${API_KEY}`;
         const resComment = await fetch(comment_url);
@@ -49,44 +52,35 @@ const PlayVideo = () => {
           throw new Error("Failed to fetch comment data");
         }
         const dataComment = await resComment.json();
-        commentList = [...commentList, ...dataComment.items];
+        commentList = [...commentList, ...(dataComment.items || [])];
         if (dataComment.nextPageToken) {
-          fetchComments(dataComment.nextPageToken); // Recursive call to fetch next page
-        } else {
-          setCommentData(commentList); // Once all comments are fetched, set the state
+          await fetchComments(dataComment.nextPageToken); // Recursive call to fetch next page
         }
       };
 
-      fetchComments(); // Start fetching comments
+      await fetchComments(); // Start fetching comments
+      setCommentData(commentList); // Once all comments are fetched, set the state
     } catch (error) {
       console.error("Error fetching other data:", error);
     }
-  };
+  }, [apiData, videoId]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      await fetchVideoData();
-    };
-    fetchData();
-  }, [videoId]);
+    fetchVideoData();
+  }, [fetchVideoData]);
 
   useEffect(() => {
-    if (apiData) {
-      const fetchData = async () => {
-        await fetchOtherData();
-      };
-      fetchData();
-    }
-  }, [apiData]);
+    fetchOtherData();
+  }, [fetchOtherData]);
 
   return (
     <div className="play-video">
       <iframe
         src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-        frameborder="0"
+        frameBorder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        referrerpolicy="strict-origin-when-cross-origin"
-        allowfullscreen
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
       ></iframe>
       <h3>{apiData ? apiData.snippet.title : "Title Here"}</h3>
       <div className="play-video-info">
