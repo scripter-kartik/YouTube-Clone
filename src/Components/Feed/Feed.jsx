@@ -1,45 +1,72 @@
 import React, { useCallback, useEffect, useState } from "react";
 import "./Feed.css";
-import { Link } from "react-router-dom";
-import { API_KEY, value_converter } from "../../data";
-import moment from "moment";
+import VideoCard from "../VideoCard/VideoCard";
+import { VideoGridSkeleton } from "../Skeleton/Skeleton";
+import { fetchPopularVideos } from "../../utils/youtubeApi";
 
 const Feed = ({ category }) => {
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
+  const [nextPageToken, setNextPageToken] = useState(null);
 
-  const fetchData = useCallback(async () => {
-    const videoList_url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=US&maxResults=50&videoCategoryId=${category}&key=${API_KEY}`;
-    await fetch(videoList_url)
-      .then((response) => response.json())
-      .then((data) => {
-        setData(data.items || []);
-      });
-  }, [category]);
+  const fetchData = useCallback(
+    async (pageToken = "", append = false) => {
+      try {
+        if (append) setLoadingMore(true);
+        else setLoading(true);
+        setError(null);
+        const response = await fetchPopularVideos(category, pageToken);
+        setData((prev) =>
+          append ? [...prev, ...(response.items || [])] : response.items || []
+        );
+        setNextPageToken(response.nextPageToken || null);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [category]
+  );
 
   useEffect(() => {
+    setData([]);
     fetchData();
   }, [fetchData]);
 
+  if (loading) return <VideoGridSkeleton />;
+  if (error) {
+    return (
+      <div className="error-state">
+        <h3>Failed to load videos</h3>
+        <p>{error}</p>
+        <button className="retry-btn" onClick={() => fetchData()}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="feed">
-      {data.map((item, index) => {
-        return (
-          <Link
-            to={`video/${item.snippet.categoryId}/${item.id}`}
-            className="card"
-            key={index}
-          >
-            <img src={item.snippet.thumbnails.medium.url} alt="" />
-            <h2>{item.snippet.title}</h2>
-            <h3>{item.snippet.channelTitle}</h3>
-            <p>
-              {value_converter(item.statistics.viewCount)} views &bull;{" "}
-              {moment(item.snippet.publishedAt).fromNow()}
-            </p>
-          </Link>
-        );
-      })}
-    </div>
+    <>
+      <div className="feed">
+        {data.map((item) => (
+          <VideoCard key={item.id} item={item} />
+        ))}
+      </div>
+      {nextPageToken && (
+        <button
+          className="load-more-btn"
+          disabled={loadingMore}
+          onClick={() => fetchData(nextPageToken, true)}
+        >
+          {loadingMore ? "Loading..." : "Load more"}
+        </button>
+      )}
+    </>
   );
 };
 

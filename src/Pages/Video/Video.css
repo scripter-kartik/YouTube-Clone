@@ -1,5 +1,5 @@
 .play-container {
-  background: #f9f9f9;
+  background: var(--bg-primary);
   padding-left: 24px;
   padding-right: 24px;
   padding-top: 20px;
@@ -10,6 +10,7 @@
   flex-wrap: wrap;
   gap: 24px;
   min-height: calc(100vh - var(--nav-height));
+  transition: background 0.2s ease;
 }
 
 @media (max-width: 1024px) {

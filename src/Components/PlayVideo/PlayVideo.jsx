@@ -4,169 +4,242 @@ import like from "../../assets/like.png";
 import dislike from "../../assets/dislike.png";
 import share from "../../assets/share.png";
 import save from "../../assets/save.png";
-import { API_KEY, value_converter } from "../../data";
+import { value_converter } from "../../data";
 import moment from "moment";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { useApp } from "../../context/AppContext";
+import { addToHistory } from "../../utils/storage";
+import {
+  fetchChannel,
+  fetchComments,
+  fetchVideoById,
+  toVideoMeta,
+} from "../../utils/youtubeApi";
+import { PlayerSkeleton } from "../Skeleton/Skeleton";
 
 const PlayVideo = () => {
   const { videoId } = useParams();
+  const { toggleSave, toggleSubscribe, isVideoSaved, isChannelSubscribed, showToast } =
+    useApp();
   const [apiData, setApiData] = useState(null);
   const [channelData, setChannelData] = useState(null);
   const [commentData, setCommentData] = useState([]);
+  const [commentToken, setCommentToken] = useState(null);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [liked, setLiked] = useState(false);
 
-  const fetchVideoData = useCallback(async () => {
+  const loadVideo = useCallback(async () => {
     try {
-      const videoDetails_url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${API_KEY}`;
-      const res = await fetch(videoDetails_url);
-      if (!res.ok) {
-        throw new Error("Failed to fetch video data");
-      }
-      const data = await res.json();
-      setApiData(data.items[0]);
-    } catch (error) {
-      console.error("Error fetching video data:", error);
+      setLoading(true);
+      setError(null);
+      setDescExpanded(false);
+      setLiked(false);
+      const video = await fetchVideoById(videoId);
+      if (!video) throw new Error("Video not found");
+      setApiData(video);
+      addToHistory(toVideoMeta(video));
+
+      const channel = await fetchChannel(video.snippet.channelId);
+      setChannelData(channel);
+
+      const comments = await fetchComments(videoId);
+      setCommentData(comments.items || []);
+      setCommentToken(comments.nextPageToken || null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   }, [videoId]);
 
-  const fetchOtherData = useCallback(async () => {
-    if (!apiData) {
-      return;
-    }
+  useEffect(() => {
+    loadVideo();
+  }, [loadVideo]);
 
+  const loadMoreComments = async () => {
+    if (!commentToken || loadingComments) return;
     try {
-      // Fetching Channel Data
-      const channelData_url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${apiData.snippet.channelId}&key=${API_KEY}`;
-      const resChannel = await fetch(channelData_url);
-      if (!resChannel.ok) {
-        throw new Error("Failed to fetch channel data");
-      }
-      const dataChannel = await resChannel.json();
-      setChannelData(dataChannel.items[0]);
-
-      // Fetching Comment Data with Pagination
-      let commentList = [];
-      const fetchComments = async (pageToken = "") => {
-        const comment_url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=50&videoId=${videoId}&pageToken=${pageToken}&key=${API_KEY}`;
-        const resComment = await fetch(comment_url);
-        if (!resComment.ok) {
-          throw new Error("Failed to fetch comment data");
-        }
-        const dataComment = await resComment.json();
-        commentList = [...commentList, ...(dataComment.items || [])];
-        if (dataComment.nextPageToken) {
-          await fetchComments(dataComment.nextPageToken); // Recursive call to fetch next page
-        }
-      };
-
-      await fetchComments(); // Start fetching comments
-      setCommentData(commentList); // Once all comments are fetched, set the state
-    } catch (error) {
-      console.error("Error fetching other data:", error);
+      setLoadingComments(true);
+      const data = await fetchComments(videoId, commentToken);
+      setCommentData((prev) => [...prev, ...(data.items || [])]);
+      setCommentToken(data.nextPageToken || null);
+    } catch (err) {
+      showToast("Could not load more comments");
+    } finally {
+      setLoadingComments(false);
     }
-  }, [apiData, videoId]);
+  };
 
-  useEffect(() => {
-    fetchVideoData();
-  }, [fetchVideoData]);
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: apiData?.snippet.title, url });
+        return;
+      } catch {
+        /* user cancelled */
+      }
+    }
+    await navigator.clipboard.writeText(url);
+    showToast("Link copied to clipboard");
+  };
 
-  useEffect(() => {
-    fetchOtherData();
-  }, [fetchOtherData]);
+  const handleSave = () => {
+    if (!apiData) return;
+    toggleSave(toVideoMeta(apiData));
+  };
+
+  const handleSubscribe = () => {
+    if (!apiData || !channelData) return;
+    toggleSubscribe({
+      channelId: apiData.snippet.channelId,
+      title: apiData.snippet.channelTitle,
+      thumbnail: channelData.snippet.thumbnails.default.url,
+    });
+  };
+
+  if (loading) return <PlayerSkeleton />;
+  if (error) {
+    return (
+      <div className="play-video error-state">
+        <h3>Video unavailable</h3>
+        <p>{error}</p>
+        <button className="retry-btn" onClick={loadVideo}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const description = apiData.snippet.description || "";
+  const showExpand = description.length > 250;
+  const displayDesc = descExpanded ? description : description.slice(0, 250);
+  const saved = isVideoSaved(videoId);
+  const subscribed = isChannelSubscribed(apiData.snippet.channelId);
 
   return (
     <div className="play-video">
       <iframe
         src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-        frameBorder="0"
+        title={apiData.snippet.title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
-      ></iframe>
-      <h3>{apiData ? apiData.snippet.title : "Title Here"}</h3>
+      />
+      <h3>{apiData.snippet.title}</h3>
       <div className="play-video-info">
         <p>
-          {apiData ? value_converter(apiData.statistics.viewCount) : "16K"}
-          Views &bull;{" "}
-          {apiData
-            ? moment(apiData.snippet.publishedAt).fromNow()
-            : "some time ago"}
+          {value_converter(apiData.statistics.viewCount)} Views &bull;{" "}
+          {moment(apiData.snippet.publishedAt).fromNow()}
         </p>
         <div>
-          <span>
+          <span
+            className={`action-btn ${liked ? "active" : ""}`}
+            onClick={() => setLiked((p) => !p)}
+          >
             <img src={like} alt="" />
-            {apiData ? value_converter(apiData.statistics.likeCount) : 155}
+            {value_converter(apiData.statistics.likeCount)}
           </span>
-          <span>
+          <span className="action-btn">
             <img src={dislike} alt="" />
           </span>
-          <span>
+          <span className="action-btn" onClick={handleShare}>
             <img src={share} alt="" />
             Share
           </span>
-          <span>
+          <span
+            className={`action-btn ${saved ? "active" : ""}`}
+            onClick={handleSave}
+          >
             <img src={save} alt="" />
-            Save
+            {saved ? "Saved" : "Save"}
           </span>
         </div>
       </div>
       <hr />
       <div className="publisher">
-        <img
-          src={channelData ? channelData.snippet.thumbnails.high.url : ""}
-          alt=""
-        />
+        <Link to={`/channel/${apiData.snippet.channelId}`}>
+          <img
+            src={channelData?.snippet.thumbnails.high?.url || ""}
+            alt=""
+          />
+        </Link>
         <div>
-          <p>{apiData ? apiData.snippet.channelTitle : ""}</p>
+          <Link to={`/channel/${apiData.snippet.channelId}`}>
+            <p>{apiData.snippet.channelTitle}</p>
+          </Link>
           <span>
-            {channelData
-              ? value_converter(channelData.statistics.subscriberCount)
-              : "1M"}{" "}
+            {value_converter(channelData?.statistics.subscriberCount || 0)}{" "}
             Subscribers
           </span>
         </div>
-        <button>Subscribe</button>
+        <button
+          className={subscribed ? "subscribed" : ""}
+          onClick={handleSubscribe}
+        >
+          {subscribed ? "Subscribed" : "Subscribe"}
+        </button>
       </div>
       <div className="vid-description">
         <p>
-          {apiData
-            ? apiData.snippet.description.slice(0, 250)
-            : "Description Here"}
+          {displayDesc}
+          {showExpand && !descExpanded && "..."}
         </p>
+        {showExpand && (
+          <button
+            className="show-more-btn"
+            onClick={() => setDescExpanded((p) => !p)}
+          >
+            {descExpanded ? "Show less" : "Show more"}
+          </button>
+        )}
         <hr />
         <h4>
-          {apiData ? value_converter(apiData.statistics.commentCount) : 102}{" "}
-          Comments
+          {value_converter(apiData.statistics.commentCount)} Comments
         </h4>
-        {commentData.map((item, index) => {
-          return (
-            <div key={index} className="comment">
-              <img
-                src={item.snippet.topLevelComment.snippet.authorProfileImageUrl}
-                alt=""
-              />
-              <div>
-                <h3>
-                  {item.snippet.topLevelComment.snippet.authorDisplayName}{" "}
-                  <span>
-                    {moment(
-                      item.snippet.topLevelComment.snippet.publishedAt
-                    ).fromNow()}
-                  </span>
-                </h3>
-                <p>{item.snippet.topLevelComment.snippet.textDisplay}</p>
-                <div className="comment-action">
-                  <img src={like} alt="" />
-                  <span>
-                    {value_converter(
-                      item.snippet.topLevelComment.snippet.likeCount
-                    )}
-                  </span>
-                  <img src={dislike} alt="" />
-                </div>
+        {commentData.length === 0 && (
+          <p className="no-comments">No comments yet</p>
+        )}
+        {commentData.map((item) => (
+          <div key={item.id} className="comment">
+            <img
+              src={item.snippet.topLevelComment.snippet.authorProfileImageUrl}
+              alt=""
+            />
+            <div>
+              <h3>
+                {item.snippet.topLevelComment.snippet.authorDisplayName}{" "}
+                <span>
+                  {moment(
+                    item.snippet.topLevelComment.snippet.publishedAt
+                  ).fromNow()}
+                </span>
+              </h3>
+              <p>{item.snippet.topLevelComment.snippet.textDisplay}</p>
+              <div className="comment-action">
+                <img src={like} alt="" />
+                <span>
+                  {value_converter(
+                    item.snippet.topLevelComment.snippet.likeCount
+                  )}
+                </span>
+                <img src={dislike} alt="" />
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
+        {commentToken && (
+          <button
+            className="load-more-btn"
+            disabled={loadingComments}
+            onClick={loadMoreComments}
+          >
+            {loadingComments ? "Loading..." : "Load more comments"}
+          </button>
+        )}
       </div>
     </div>
   );

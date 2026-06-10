@@ -1,5 +1,5 @@
 .sidebar {
-  background: #fff;
+  background: var(--bg-secondary);
   width: var(--sidebar-width);
   height: 100vh;
   position: fixed;
@@ -10,13 +10,19 @@
   padding-top: calc(var(--nav-height) + 16px);
   overflow-y: auto;
   z-index: 95;
-  transition: width 0.2s ease, transform 0.25s ease;
+  transition: width 0.2s ease, transform 0.25s ease, background 0.2s ease;
 }
 
-.shortcut-links img {
+.shortcut-links img,
+.subscribed-list img {
   width: 20px;
   margin-right: 20px;
   flex-shrink: 0;
+}
+
+.subscribed-list img {
+  width: 25px;
+  border-radius: 50%;
 }
 
 .side-link {
@@ -27,32 +33,29 @@
   max-width: 100%;
   flex-wrap: nowrap;
   cursor: pointer;
+  color: var(--text-primary);
 }
 
 .side-link p {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 14px;
 }
 
 .sidebar hr {
   border: 0;
   height: 1px;
-  background: #ccc;
+  background: var(--border-color);
   width: 85%;
+  margin-bottom: 8px;
 }
 
 .subscribed-list h3 {
   font-size: 13px;
-  margin: 20px 0;
-  color: #5a5a5a;
-}
-
-.subscribed-list img {
-  width: 25px;
-  border-radius: 50%;
-  margin-right: 20px;
-  flex-shrink: 0;
+  margin: 20px 0 12px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .small-sidebar {
@@ -74,19 +77,21 @@
   margin-bottom: 25px;
 }
 
-.side-link.active img {
-  padding-bottom: 2px;
-  border-bottom: 3px solid red;
+.side-link.active {
+  font-weight: 600;
 }
 
-/* Hide sidebar on video page (desktop) */
+.side-link.active img {
+  padding-bottom: 2px;
+  border-bottom: 3px solid var(--accent);
+}
+
 @media (min-width: 769px) {
   .sidebar.video-page {
     display: none;
   }
 }
 
-/* Tablet: narrower sidebar */
 @media (max-width: 1024px) and (min-width: 769px) {
   .sidebar.home-page {
     width: 200px;
@@ -97,7 +102,6 @@
   }
 }
 
-/* Mobile: off-canvas drawer */
 @media (max-width: 768px) {
   .sidebar {
     width: var(--sidebar-width);

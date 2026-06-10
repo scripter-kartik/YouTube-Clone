@@ -4,12 +4,22 @@ import Sidebar from "./Components/Sidebar/Sidebar";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Home from "./Pages/Home/Home";
 import Video from "./Pages/Video/Video";
+import Search from "./Pages/Search/Search";
+import Channel from "./Pages/Channel/Channel";
+import History from "./Pages/History/History";
+import Saved from "./Pages/Saved/Saved";
 
 const MOBILE_BREAKPOINT = 768;
 
+const layoutProps = (sidebar, isMobile, category) => ({
+  sidebar,
+  isMobile,
+  category,
+});
+
 const AppContent = () => {
   const location = useLocation();
-  const isHome = location.pathname === "/";
+  const isVideoPage = location.pathname.startsWith("/video/");
 
   const [sidebar, setSidebar] = useState(
     () => window.innerWidth > MOBILE_BREAKPOINT
@@ -46,13 +56,15 @@ const AppContent = () => {
   const toggleSidebar = () => setSidebar((prev) => !prev);
   const closeSidebar = () => setSidebar(false);
 
+  const pageProps = layoutProps(sidebar, isMobile, category);
+
   return (
     <div className="app">
       <Navbar toggleSidebar={toggleSidebar} isMobile={isMobile} />
       <Sidebar
         sidebar={sidebar}
         isMobile={isMobile}
-        isHome={isHome}
+        isVideoPage={isVideoPage}
         category={category}
         setCategory={setCategory}
         closeSidebar={closeSidebar}
@@ -65,24 +77,17 @@ const AppContent = () => {
         />
       )}
       <Routes>
-        <Route
-          path="/"
-          element={
-            <Home
-              sidebar={sidebar}
-              isMobile={isMobile}
-              category={category}
-            />
-          }
-        />
+        <Route path="/" element={<Home {...pageProps} />} />
+        <Route path="/search" element={<Search {...pageProps} />} />
+        <Route path="/history" element={<History {...pageProps} />} />
+        <Route path="/saved" element={<Saved {...pageProps} />} />
+        <Route path="/channel/:channelId" element={<Channel {...pageProps} />} />
         <Route path="/video/:categoryId/:videoId" element={<Video />} />
       </Routes>
     </div>
   );
 };
 
-const App = () => {
-  return <AppContent />;
-};
+const App = () => <AppContent />;
 
 export default App;
