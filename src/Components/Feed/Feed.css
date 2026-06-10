@@ -1,26 +1,68 @@
 .feed {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  grid-column-gap: 16px;
-  grid-row-gap: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px 16px;
   margin-top: 15px;
 }
+
+.card {
+  display: block;
+  min-width: 0;
+}
+
 .card img {
   width: 100%;
-  border-radius: 5px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
 }
+
 .card h2 {
-  font-size: 16px;
+  font-size: clamp(14px, 2vw, 16px);
   font-weight: 600;
   color: #000;
-  margin: 5px 0;
+  margin: 8px 0 4px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
 .card h3 {
   font-size: 14px;
   font-weight: 600;
   color: #555;
-  margin: 6px 0;
+  margin: 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .card p {
-  font-size: 14px;
+  font-size: 13px;
+  color: #5a5a5a;
+}
+
+@media (max-width: 768px) {
+  .feed {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px 12px;
+    margin-top: 8px;
+  }
+
+  .card img {
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .feed {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .card h3 {
+    white-space: normal;
+  }
 }

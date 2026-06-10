@@ -5,35 +5,170 @@ nav {
   background: #fff;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 100;
+  min-height: var(--nav-height);
+  gap: 12px;
 }
+
+.nav-left {
+  flex-shrink: 0;
+}
+
 .nav-left .menu-icon {
   width: 22px;
-  margin-right: 25px;
+  margin-right: 16px;
 }
+
 .nav-left .logo {
   width: 130px;
+  max-width: 100%;
 }
+
+.nav-middle {
+  flex: 1;
+  justify-content: center;
+  max-width: 720px;
+  min-width: 0;
+}
+
 .nav-middle .search-box {
   border: 1px solid #ccc;
-  margin-right: 15px;
   padding: 8px 12px;
   border-radius: 25px;
+  width: 100%;
+  max-width: 540px;
 }
+
 .nav-middle .search-box input {
-  width: 400px;
+  width: 100%;
+  min-width: 0;
   border: 0;
   outline: 0;
   background: transparent;
+  font-size: 16px;
 }
+
 .nav-middle .search-box img {
   width: 15px;
+  flex-shrink: 0;
 }
+
+.nav-middle .mobile-search-icon {
+  display: none;
+}
+
+.nav-right {
+  flex-shrink: 0;
+  gap: 8px;
+}
+
 .nav-right img {
   width: 25px;
-  margin-right: 25px;
 }
+
 .nav-right .user-icon {
   width: 35px;
   border-radius: 50%;
+}
+
+.mobile-search-bar {
+  display: none;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .nav-left .logo {
+    width: 100px;
+  }
+
+  .nav-right img {
+    width: 22px;
+  }
+
+  .nav-right .user-icon {
+    width: 32px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  nav {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+
+  nav.search-active .nav-middle .search-box {
+    display: none;
+  }
+
+  .nav-left .menu-icon {
+    margin-right: 12px;
+  }
+
+  .nav-left .logo {
+    width: 90px;
+  }
+
+  .nav-middle {
+    flex: 0;
+    max-width: none;
+  }
+
+  .nav-middle .search-box {
+    display: none;
+  }
+
+  .nav-middle .mobile-search-icon {
+    display: block;
+    width: 22px;
+    padding: 4px;
+  }
+
+  .nav-icon-upload,
+  .nav-icon-more {
+    display: none;
+  }
+
+  .nav-right {
+    gap: 12px;
+  }
+
+  .mobile-search-bar {
+    display: flex;
+    width: 100%;
+    order: 4;
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .mobile-search-bar .search-box {
+    flex: 1;
+    max-width: none;
+    display: flex;
+  }
+
+  .search-close {
+    background: none;
+    border: none;
+    color: #065fd4;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 0 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-left .logo {
+    width: 80px;
+  }
+
+  .nav-icon-notification {
+    display: none;
+  }
+
+  .nav-right {
+    gap: 8px;
+  }
 }

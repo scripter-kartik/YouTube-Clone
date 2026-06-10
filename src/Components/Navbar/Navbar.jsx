@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import "./Navbar.css";
 import menu_icon from "../../assets/menu.png";
 import logo from "../../assets/logo.png";
@@ -9,19 +9,19 @@ import notification_icon from "../../assets/notification.png";
 import profile_icon from "../../assets/jack.png";
 import { Link } from "react-router-dom";
 
-const Navbar = ({ setSidebar }) => {
+const Navbar = ({ toggleSidebar, isMobile }) => {
+  const [searchOpen, setSearchOpen] = useState(false);
+
   return (
-    <nav className="flex-div">
+    <nav className={`flex-div ${searchOpen ? "search-active" : ""}`}>
       <div className="nav-left flex-div">
         <img
           className="menu-icon"
-          onClick={() => {
-            setSidebar((prev) => !prev);
-          }}
+          onClick={toggleSidebar}
           src={menu_icon}
           alt="Menu"
         />
-        <Link to="/">
+        <Link to="/" onClick={() => searchOpen && setSearchOpen(false)}>
           <img className="logo" src={logo} alt="Logo" />
         </Link>
       </div>
@@ -31,14 +31,42 @@ const Navbar = ({ setSidebar }) => {
           <input type="text" placeholder="Search" />
           <img src={search_icon} alt="Search" />
         </div>
+        {isMobile && (
+          <img
+            className="mobile-search-icon"
+            src={search_icon}
+            alt="Search"
+            onClick={() => setSearchOpen((prev) => !prev)}
+          />
+        )}
       </div>
 
       <div className="nav-right flex-div">
-        <img src={upload_icon} alt="Upload" />
-        <img src={more_icon} alt="More Options" />
-        <img src={notification_icon} alt="Notifications" />
+        <img className="nav-icon-upload" src={upload_icon} alt="Upload" />
+        <img className="nav-icon-more" src={more_icon} alt="More Options" />
+        <img
+          className="nav-icon-notification"
+          src={notification_icon}
+          alt="Notifications"
+        />
         <img src={profile_icon} className="user-icon" alt="Profile" />
       </div>
+
+      {isMobile && searchOpen && (
+        <div className="mobile-search-bar flex-div">
+          <div className="search-box flex-div">
+            <input type="text" placeholder="Search" autoFocus />
+            <img src={search_icon} alt="Search" />
+          </div>
+          <button
+            className="search-close"
+            onClick={() => setSearchOpen(false)}
+            type="button"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </nav>
   );
 };

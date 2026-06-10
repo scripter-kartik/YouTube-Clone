@@ -4,14 +4,43 @@
     box-sizing: border-box;
     font-family: sans-serif;
 }
+
+:root {
+    --nav-height: 56px;
+    --sidebar-width: 240px;
+    --sidebar-collapsed: 72px;
+    --mobile-breakpoint: 768px;
+    --tablet-breakpoint: 1024px;
+}
+
 a {
     text-decoration: none;
     color: #5a5a5a;
 }
+
 img {
     cursor: pointer;
 }
+
 .flex-div {
     display: flex;
     align-items: center;
+}
+
+body.sidebar-open {
+    overflow: hidden;
+}
+
+.sidebar-backdrop {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 90;
+    }
 }
